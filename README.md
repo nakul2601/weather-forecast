@@ -4,7 +4,7 @@ A modern, responsive weather website that displays 10-day weather forecasts for 
 
 ## Features
 
-- **Current Weather Display**: Shows current temperature, feels-like temperature, humidity, wind speed, and pressure
+- **Current Weather Display**: Shows current temperature, feels-like temperature, humidity, wind speed, and pressure  
 - **10-Day Forecast**: Detailed weather predictions for the next 10 days  
 - **City Search**: Search for weather in any city worldwide  
 - **Responsive Design**: Works perfectly on desktop, tablet, and mobile devices
