@@ -8,7 +8,7 @@ A modern, responsive weather website that displays 10-day weather forecasts for 
 - **10-Day Forecast**: Detailed weather predictions for the next 10 days  
 - **City Search**: Search for weather in any city worldwide  
 - **Responsive Design**: Works perfectly on desktop, tablet, and mobile devices
-- **Modern UI**: Beautiful gradient background with card-based layout
+- **Modern UI**: Beautiful gradient background with card-based layout 
 - **Weather Icons**: Emoji-based weather icons for better visual appeal
 - **Loading States**: Smooth loading animations while fetching data
 - **Error Handling**: User-friendly error messages for invalid cities or API issues
