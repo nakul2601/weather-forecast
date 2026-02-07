@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>10-Day Weather Forecast</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .weather-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .weather-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">
+                <i class="fas fa-cloud-sun mr-3"></i>10-Day Weather Forecast
+            </h1>
+            <p class="text-blue-100 text-lg">Get detailed weather predictions for any city</p>
+        </header>
+
+        <!-- Search Section -->
+        <section class="max-w-2xl mx-auto mb-8">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex flex-col md:flex-row gap-4">
+                    <input 
+                        type="text" 
+                        id="cityInput" 
+                        placeholder="Enter city name (e.g., London, New York, Tokyo, Paris, Sydney, Dubai, Moscow)"
+                        class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                    <button 
+                        onclick="getWeather()"
+                        class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-300 font-semibold"
+                    >
+                        <i class="fas fa-search mr-2"></i>Get Weather
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="hidden text-center py-12">
+            <div class="loading-spinner mx-auto mb-4"></div>
+            <p class="text-white text-lg">Fetching weather data...</p>
+        </div>
+
+        <!-- Error Message -->
+        <div id="errorMessage" class="hidden max-w-2xl mx-auto mb-8">
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                <span id="errorText"></span>
+            </div>
+        </div>
+
+        <!-- Current Weather -->
+        <section id="currentWeather" class="hidden max-w-4xl mx-auto mb-8">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex flex-col md:flex-row items-center justify-between">
+                    <div class="text-center md:text-left mb-4 md:mb-0">
+                        <h2 class="text-3xl font-bold text-gray-800 mb-2">
+                            <i class="fas fa-map-marker-alt mr-2 text-red-500"></i>
+                            <span id="cityName"></span>
+                        </h2>
+                        <p class="text-gray-600" id="currentDate"></p>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-5xl mb-2" id="currentWeatherIcon"></div>
+                        <p class="text-4xl font-bold text-gray-800" id="currentTemp"></p>
+                        <p class="text-gray-600" id="currentDescription"></p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-200">
+                    <div class="text-center">
+                        <i class="fas fa-temperature-high text-2xl text-orange-500 mb-2"></i>
+                        <p class="text-sm text-gray-600">Feels Like</p>
+                        <p class="font-semibold" id="feelsLike"></p>
+                    </div>
+                    <div class="text-center">
+                        <i class="fas fa-tint text-2xl text-blue-500 mb-2"></i>
+                        <p class="text-sm text-gray-600">Humidity</p>
+                        <p class="font-semibold" id="humidity"></p>
+                    </div>
+                    <div class="text-center">
+                        <i class="fas fa-wind text-2xl text-gray-500 mb-2"></i>
+                        <p class="text-sm text-gray-600">Wind Speed</p>
+                        <p class="font-semibold" id="windSpeed"></p>
+                    </div>
+                    <div class="text-center">
+                        <i class="fas fa-compress-arrows-alt text-2xl text-purple-500 mb-2"></i>
+                        <p class="text-sm text-gray-600">Pressure</p>
+                        <p class="font-semibold" id="pressure"></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 10-Day Forecast -->
+        <section id="forecast" class="hidden">
+            <h2 class="text-3xl font-bold text-white text-center mb-6">10-Day Forecast</h2>
+            <div id="forecastCards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <!-- Forecast cards will be inserted here -->
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Weather icon mapping
+        const weatherIcons = {
+            '01d': '☀️', '01n': '🌙',
+            '02d': '⛅', '02n': '☁️',
+            '03d': '☁️', '03n': '☁️',
+            '04d': '☁️', '04n': '☁️',
+            '09d': '🌧️', '09n': '🌧️',
+            '10d': '🌦️', '10n': '🌧️',
+            '11d': '⛈️', '11n': '⛈️',
+            '13d': '❄️', '13n': '❄️',
+            '50d': '🌫️', '50n': '🌫️'
+        };
+
+        // Sample weather data for different cities
+        const sampleWeatherData = {
+            'london': {
+                current: {
+                    name: 'London',
+                    country: 'GB',
+                    temp: 15,
+                    feels_like: 13,
+                    humidity: 72,
+                    pressure: 1012,
+                    wind_speed: 4.2,
+                    description: 'partly cloudy',
+                    icon: '02d'
+                },
+                forecast: [
+                    { date: '2024-01-15', temp: 15, description: 'partly cloudy', icon: '02d', humidity: 72, wind_speed: 4.2 },
+                    { date: '2024-01-16', temp: 17, description: 'sunny', icon: '01d', humidity: 65, wind_speed: 3.1 },
+                    { date: '2024-01-17', temp: 14, description: 'light rain', icon: '10d', humidity: 80, wind_speed: 5.5 },
+                    { date: '2024-01-18', temp: 12, description: 'rain', icon: '09d', humidity: 85, wind_speed: 6.2 },
+                    { date: '2024-01-19', temp: 16, description: 'cloudy', icon: '04d', humidity: 70, wind_speed: 3.8 },
+                    { date: '2024-01-20', temp: 18, description: 'sunny', icon: '01d', humidity: 60, wind_speed: 2.9 },
+                    { date: '2024-01-21', temp: 19, description: 'sunny', icon: '01d', humidity: 55, wind_speed: 2.5 },
+                    { date: '2024-01-22', temp: 20, description: 'partly cloudy', icon: '02d', humidity: 58, wind_speed: 3.2 },
+                    { date: '2024-01-23', temp: 17, description: 'light rain', icon: '10d', humidity: 75, wind_speed: 4.8 },
+                    { date: '2024-01-24', temp: 15, description: 'cloudy', icon: '04d', humidity: 68, wind_speed: 4.0 }
+                ]
+            },
+            'new york': {
+                current: {
+                    name: 'New York',
+                    country: 'US',
+                    temp: 8,
+                    feels_like: 5,
+                    humidity: 65,
+                    pressure: 1018,
+                    wind_speed: 5.5,
+                    description: 'clear sky',
+                    icon: '01d'
+                },
+                forecast: [
+                    { date: '2024-01-15', temp: 8, description: 'clear sky', icon: '01d', humidity: 65, wind_speed: 5.5 },
+                    { date: '2024-01-16', temp: 10, description: 'sunny', icon: '01d', humidity: 60, wind_speed: 4.2 },
+                    { date: '2024-01-17', temp: 6, description: 'snow', icon: '13d', humidity: 80, wind_speed: 7.0 },
+                    { date: '2024-01-18', temp: 4, description: 'snow', icon: '13d', humidity: 85, wind_speed: 8.2 },
+                    { date: '2024-01-19', temp: 7, description: 'cloudy', icon: '04d', humidity: 70, wind_speed: 5.0 },
+                    { date: '2024-01-20', temp: 11, description: 'sunny', icon: '01d', humidity: 55, wind_speed: 3.8 },
+                    { date: '2024-01-21', temp: 12, description: 'sunny', icon: '01d', humidity: 50, wind_speed: 3.2 },
+                    { date: '2024-01-22', temp: 13, description: 'partly cloudy', icon: '02d', humidity: 52, wind_speed: 4.0 },
+                    { date: '2024-01-23', temp: 9, description: 'light rain', icon: '10d', humidity: 70, wind_speed: 5.5 },
+                    { date: '2024-01-24', temp: 7, description: 'cloudy', icon: '04d', humidity: 65, wind_speed: 4.8 }
+                ]
+            },
+            'tokyo': {
+                current: {
+                    name: 'Tokyo',
+                    country: 'JP',
+                    temp: 12,
+                    feels_like: 10,
+                    humidity: 68,
+                    pressure: 1015,
+                    wind_speed: 3.8,
+                    description: 'overcast',
+                    icon: '04d'
+                },
+                forecast: [
+                    { date: '2024-01-15', temp: 12, description: 'overcast', icon: '04d', humidity: 68, wind_speed: 3.8 },
+                    { date: '2024-01-16', temp: 14, description: 'partly cloudy', icon: '02d', humidity: 62, wind_speed: 3.2 },
+                    { date: '2024-01-17', temp: 11, description: 'light rain', icon: '10d', humidity: 78, wind_speed: 4.5 },
+                    { date: '2024-01-18', temp: 9, description: 'rain', icon: '09d', humidity: 82, wind_speed: 5.2 },
+                    { date: '2024-01-19', temp: 13, description: 'cloudy', icon: '04d', humidity: 66, wind_speed: 3.5 },
+                    { date: '2024-01-20', temp: 15, description: 'sunny', icon: '01d', humidity: 58, wind_speed: 2.8 },
+                    { date: '2024-01-21', temp: 16, description: 'sunny', icon: '01d', humidity: 54, wind_speed: 2.5 },
+                    { date: '2024-01-22', temp: 17, description: 'partly cloudy', icon: '02d', humidity: 56, wind_speed: 3.0 },
+                    { date: '2024-01-23', temp: 14, description: 'light rain', icon: '10d', humidity: 72, wind_speed: 4.2 },
+                    { date: '2024-01-24', temp: 12, description: 'cloudy', icon: '04d', humidity: 64, wind_speed: 3.6 }
+                ]
+            },
+            'paris': {
+                current: {
+                    name: 'Paris',
+                    country: 'FR',
+                    temp: 11,
+                    feels_like: 9,
+                    humidity: 70,
+                    pressure: 1015,
+                    wind_speed: 3.5,
+                    description: 'light rain',
+                    icon: '10d'
+                },
+                forecast: [
+                    { date: '2024-01-15', temp: 11, description: 'light rain', icon: '10d', humidity: 70, wind_speed: 3.5 },
+                    { date: '2024-01-16', temp: 13, description: 'cloudy', icon: '04d', humidity: 68, wind_speed: 4.0 },
+                    { date: '2024-01-17', temp: 10, description: 'overcast', icon: '04d', humidity: 75, wind_speed: 4.2 },
+                    { date: '2024-01-18', temp: 8, description: 'rain', icon: '09d', humidity: 80, wind_speed: 5.0 },
+                    { date: '2024-01-19', temp: 12, description: 'partly cloudy', icon: '02d', humidity: 65, wind_speed: 3.8 },
+                    { date: '2024-01-20', temp: 14, description: 'sunny', icon: '01d', humidity: 60, wind_speed: 3.0 },
+                    { date: '2024-01-21', temp: 15, description: 'sunny', icon: '01d', humidity: 58, wind_speed: 2.8 },
+                    { date: '2024-01-22', temp: 16, description: 'partly cloudy', icon: '02d', humidity: 62, wind_speed: 3.2 },
+                    { date: '2024-01-23', temp: 13, description: 'light rain', icon: '10d', humidity: 70, wind_speed: 4.5 },
+                    { date: '2024-01-24', temp: 11, description: 'cloudy', icon: '04d', humidity: 68, wind_speed: 3.9 }
+                ]
+            },
+            'sydney': {
+                current: {
+                    name: 'Sydney',
+                    country: 'AU',
+                    temp: 22,
+                    feels_like: 24,
+                    humidity: 60,
+                    pressure: 1010,
+                    wind_speed: 4.0,
+                    description: 'sunny',
+                    icon: '01d'
+                },
+                forecast: [
+                    { date: '2024-01-15', temp: 22, description: 'sunny', icon: '01d', humidity: 60, wind_speed: 4.0 },
+                    { date: '2024-01-16', temp: 24, description: 'sunny', icon: '01d', humidity: 55, wind_speed: 3.5 },
+                    { date: '2024-01-17', temp: 23, description: 'partly cloudy', icon: '02d', humidity: 58, wind_speed: 4.2 },
+                    { date: '2024-01-18', temp: 21, description: 'cloudy', icon: '04d', humidity: 65, wind_speed: 4.8 },
+                    { date: '2024-01-19', temp: 19, description: 'light rain', icon: '10d', humidity: 72, wind_speed: 5.2 },
+                    { date: '2024-01-20', temp: 20, description: 'rain', icon: '09d', humidity: 78, wind_speed: 5.5 },
+                    { date: '2024-01-21', temp: 22, description: 'partly cloudy', icon: '02d', humidity: 68, wind_speed: 4.0 },
+                    { date: '2024-01-22', temp: 24, description: 'sunny', icon: '01d', humidity: 62, wind_speed: 3.8 },
+                    { date: '2024-01-23', temp: 23, description: 'sunny', icon: '01d', humidity: 58, wind_speed: 3.2 },
+                    { date: '2024-01-24', temp: 21, description: 'partly cloudy', icon: '02d', humidity: 65, wind_speed: 4.1 }
+                ]
+            },
+            'dubai': {
+                current: {
+                    name: 'Dubai',
+                    country: 'AE',
+                    temp: 28,
+                    feels_like: 30,
+                    humidity: 45,
+                    pressure: 1008,
+                    wind_speed: 3.2,
+                    description: 'sunny',
+                    icon: '01d'
+                },
+                forecast: [
+                    { date: '2024-01-15', temp: 28, description: 'sunny', icon: '01d', humidity: 45, wind_speed: 3.2 },
+                    { date: '2024-01-16', temp: 29, description: 'sunny', icon: '01d', humidity: 42, wind_speed: 3.0 },
+                    { date: '2024-01-17', temp: 30, description: 'sunny', icon: '01d', humidity: 40, wind_speed: 2.8 },
+                    { date: '2024-01-18', temp: 31, description: 'partly cloudy', icon: '02d', humidity: 48, wind_speed: 3.5 },
+                    { date: '2024-01-19', temp: 29, description: 'sunny', icon: '01d', humidity: 44, wind_speed: 3.1 },
+                    { date: '2024-01-20', temp: 27, description: 'partly cloudy', icon: '02d', humidity: 50, wind_speed: 3.8 },
+                    { date: '2024-01-21', temp: 26, description: 'cloudy', icon: '04d', humidity: 52, wind_speed: 4.0 },
+                    { date: '2024-01-22', temp: 28, description: 'sunny', icon: '01d', humidity: 46, wind_speed: 3.2 },
+                    { date: '2024-01-23', temp: 29, description: 'sunny', icon: '01d', humidity: 43, wind_speed: 2.9 },
+                    { date: '2024-01-24', temp: 30, description: 'partly cloudy', icon: '02d', humidity: 47, wind_speed: 3.4 }
+                ]
+            },
+            'moscow': {
+                current: {
+                    name: 'Moscow',
+                    country: 'RU',
+                    temp: -5,
+                    feels_like: -8,
+                    humidity: 85,
+                    pressure: 1020,
+                    wind_speed: 6.5,
+                    description: 'snow',
+                    icon: '13d'
+                },
+                forecast: [
+                    { date: '2024-01-15', temp: -5, description: 'snow', icon: '13d', humidity: 85, wind_speed: 6.5 },
+                    { date: '2024-01-16', temp: -7, description: 'snow', icon: '13d', humidity: 88, wind_speed: 7.2 },
+                    { date: '2024-01-17', temp: -3, description: 'light snow', icon: '13d', humidity: 82, wind_speed: 5.8 },
+                    { date: '2024-01-18', temp: -6, description: 'snow', icon: '13d', humidity: 90, wind_speed: 8.0 },
+                    { date: '2024-01-19', temp: -4, description: 'cloudy', icon: '04d', humidity: 78, wind_speed: 5.2 },
+                    { date: '2024-01-20', temp: -2, description: 'partly cloudy', icon: '02d', humidity: 75, wind_speed: 4.8 },
+                    { date: '2024-01-21', temp: -1, description: 'sunny', icon: '01d', humidity: 70, wind_speed: 4.0 },
+                    { date: '2024-01-22', temp: 0, description: 'partly cloudy', icon: '02d', humidity: 72, wind_speed: 4.5 },
+                    { date: '2024-01-23', temp: -3, description: 'light snow', icon: '13d', humidity: 80, wind_speed: 6.0 },
+                    { date: '2024-01-24', temp: -5, description: 'snow', icon: '13d', humidity: 85, wind_speed: 6.8 }
+                ]
+            }
+        };
+
+        function showLoading() {
+            document.getElementById('loadingState').classList.remove('hidden');
+            document.getElementById('errorMessage').classList.add('hidden');
+            document.getElementById('currentWeather').classList.add('hidden');
+            document.getElementById('forecast').classList.add('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingState').classList.add('hidden');
+        }
+
+        function showError(message) {
+            document.getElementById('errorText').textContent = message;
+            document.getElementById('errorMessage').classList.remove('hidden');
+            hideLoading();
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').classList.add('hidden');
+        }
+
+        function getWeatherIcon(iconCode) {
+            return weatherIcons[iconCode] || '🌤️';
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const options = { weekday: 'short', month: 'short', day: 'numeric' };
+            return date.toLocaleDateString('en-US', options);
+        }
+
+        function formatCurrentDate() {
+            const date = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            return date.toLocaleDateString('en-US', options);
+        }
+
+        function getWeather() {
+            const city = document.getElementById('cityInput').value.trim().toLowerCase();
+            
+            if (!city) {
+                showError('Please enter a city name');
+                return;
+            }
+
+            showLoading();
+            hideError();
+
+            // Simulate API call with sample data
+            setTimeout(() => {
+                let weatherData = sampleWeatherData[city];
+                
+                // If city not found, use London as default
+                if (!weatherData) {
+                    weatherData = sampleWeatherData['london'];
+                    showError(`City not found. Showing London weather instead.`);
+                }
+
+                displayCurrentWeather(weatherData.current);
+                displayForecast(weatherData.forecast);
+                hideLoading();
+            }, 800);
+        }
+
+        function displayCurrentWeather(data) {
+            document.getElementById('cityName').textContent = `${data.name}, ${data.country}`;
+            document.getElementById('currentDate').textContent = formatCurrentDate();
+            document.getElementById('currentWeatherIcon').textContent = getWeatherIcon(data.icon);
+            document.getElementById('currentTemp').textContent = `${Math.round(data.temp)}°C`;
+            document.getElementById('currentDescription').textContent = data.description;
+            document.getElementById('feelsLike').textContent = `${Math.round(data.feels_like)}°C`;
+            document.getElementById('humidity').textContent = `${data.humidity}%`;
+            document.getElementById('windSpeed').textContent = `${data.wind_speed} m/s`;
+            document.getElementById('pressure').textContent = `${data.pressure} hPa`;
+            
+            document.getElementById('currentWeather').classList.remove('hidden');
+        }
+
+        function displayForecast(data) {
+            const forecastCards = document.getElementById('forecastCards');
+            forecastCards.innerHTML = '';
+
+            data.forEach(day => {
+                const card = document.createElement('div');
+                card.className = 'weather-card bg-white rounded-lg shadow-lg p-4 text-center';
+                
+                const dayName = formatDate(day.date);
+                const icon = getWeatherIcon(day.icon);
+                const temp = Math.round(day.temp);
+                const description = day.description;
+                const humidity = day.humidity;
+                const windSpeed = day.wind_speed;
+
+                card.innerHTML = `
+                    <h3 class="font-bold text-gray-800 mb-2">${dayName}</h3>
+                    <div class="text-4xl mb-2">${icon}</div>
+                    <p class="text-2xl font-bold text-gray-800 mb-1">${temp}°C</p>
+                    <p class="text-sm text-gray-600 mb-3">${description}</p>
+                    <div class="text-xs text-gray-500 space-y-1">
+                        <p><i class="fas fa-tint mr-1"></i>${humidity}%</p>
+                        <p><i class="fas fa-wind mr-1"></i>${windSpeed} m/s</p>
+                    </div>
+                `;
+                
+                forecastCards.appendChild(card);
+            });
+
+            document.getElementById('forecast').classList.remove('hidden');
+        }
+
+        // Allow Enter key to trigger search
+        document.getElementById('cityInput').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                getWeather();
+            }
+        });
+
+        // Load default weather on page load
+        window.addEventListener('load', function() {
+            document.getElementById('cityInput').value = 'London';
+            getWeather();
+        });
+    </script>
+</body>
+</html>
