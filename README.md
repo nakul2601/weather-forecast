@@ -1,7 +1,7 @@
 # 10-Day Weather Forecast Website
 
 A modern, responsive weather website that displays 10-day weather forecasts for any city worldwide.
-
+ 
 ## Features
 
 - **Current Weather Display**: Shows current temperature, feels-like temperature, humidity, wind speed, and pressure  
